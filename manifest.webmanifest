@@ -1,0 +1,14 @@
+{
+  "name": "Planner de Casamento — Universo Noiva da Bi",
+  "short_name": "Planner Noiva",
+  "description": "Checklist, cronograma, orçamento e organização para planejar cada etapa do casamento com leveza.",
+  "lang": "pt-BR",
+  "start_url": "./index.html#/inicio",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#FBF6EE",
+  "theme_color": "#FBF6EE",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

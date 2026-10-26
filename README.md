@@ -15,7 +15,8 @@ Abra o arquivo `index.html` no navegador. Os dados ficam salvos no próprio apar
 3. Em **Project Settings > API**, copie a **Project URL** e a chave **anon public**.
 4. Cole esses dois valores em `js/config.js` (assim todos os noivos já abrem o app conectados).
    Também é possível colar direto no app, em **Conta e backup**.
-5. No app, em **Conta e backup**, cada casal cria a conta com e-mail e senha.
+5. Em **Authentication > URL Configuration**, coloque em **Site URL** e em **Redirect URLs** o endereço do app: `https://biistorecontato.github.io/planner-noiva/` (é para onde vão os links de confirmação e de nova senha).
+6. Pronto: ao abrir o app, as clientes veem a tela de **Entrar / Criar conta** e cadastram e-mail e senha.
    Cada conta só enxerga o próprio planner.
 
 Para não exigir confirmação por e-mail no cadastro: **Authentication > Sign In / Providers > Email > Confirm email** (desligar).

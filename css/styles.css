@@ -275,3 +275,32 @@ input[type=checkbox] { accent-color: var(--gold); width: 20px; height: 20px; mar
   .hero::after { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---------- tela de entrada ---------- */
+body.auth-mode #sidebar, body.auth-mode .topbar, body.auth-mode #scrim { display: none; }
+body.auth-mode main { margin: 0; max-width: none; padding: 0; }
+.auth-wrap {
+  min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 32px 16px;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(201, 164, 92, .18), transparent 40%),
+    radial-gradient(circle at 90% 90%, rgba(201, 164, 92, .14), transparent 45%),
+    var(--bg);
+}
+.auth-card {
+  width: 100%; max-width: 420px; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 20px; padding: 36px clamp(20px, 6vw, 40px) 28px; box-shadow: 0 20px 60px rgba(110, 85, 40, .12);
+}
+.auth-brand { display: flex; flex-direction: column; align-items: center; color: var(--gold-deep); line-height: 1; margin-bottom: 24px; }
+.auth-brand .brand-top { font-size: 30px; }
+.auth-brand .brand-mid { font-size: 25px; }
+.auth-brand .brand-script { font-size: 40px; }
+.auth-kicker { font-family: var(--caps); font-size: 11px; letter-spacing: .25em; text-transform: uppercase; color: var(--muted); margin: 14px 0 0; text-align: center; }
+.auth-tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--bg); border-radius: 99px; padding: 4px; margin-bottom: 20px; }
+.auth-tab { border: 0; background: none; border-radius: 99px; padding: 10px; cursor: pointer; color: var(--muted); min-height: 44px; }
+.auth-tab.active { background: var(--surface); color: var(--gold-deep); font-weight: 500; box-shadow: 0 1px 4px rgba(110, 85, 40, .12); }
+.auth-title { font-family: var(--serif); font-weight: 600; font-size: 28px; text-align: center; margin: 0 0 16px; }
+.auth-form { display: flex; flex-direction: column; gap: 14px; }
+.auth-form .btn { width: 100%; }
+.auth-form .form-msg { margin: 0; }
+.auth-form .form-msg:empty { display: none; }
+.auth-note { text-align: center; color: var(--muted); font-size: 13px; margin: 20px 0 0; }

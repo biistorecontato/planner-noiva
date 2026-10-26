@@ -164,7 +164,7 @@ function renderNav() {
       badge = h('span', { class: 'badge', text: pct(done, total) + '%' });
     }
     return h('a', { class: 'nav-link' + (s.id === sec ? ' active' : ''), href: '#/' + s.id,
-      onclick: () => document.body.classList.remove('menu-open') }, icon(s.icone), h('span', { text: s.titulo }), badge);
+      onclick: () => document.body.classList.remove('menu-open') }, icon(s.icone), h('span', { text: s.id === 'conta' && Store.managed ? 'Minha conta' : s.titulo }), badge);
   }));
   const f = S().fields;
   document.getElementById('brand-names').textContent = f.noivos || '';
@@ -176,6 +176,15 @@ function render() {
   const def = SECOES.find(s => s.id === sec);
   const main = $main();
   const scroll = window.scrollY;
+  const gate = !Store.ready ? renderLoading()
+    : recoveryMode ? renderNewPassword()
+    : Store.managed && !Store.user ? renderAuth()
+    : null;
+  document.body.classList.toggle('auth-mode', !!gate);
+  if (gate) {
+    main.replaceChildren(gate);
+    return scroll;
+  }
   let content;
   if (sec === 'inicio') content = renderDashboard();
   else if (sec === 'checklist') content = renderChecklistPage(sub);
@@ -546,10 +555,27 @@ function renderChecklistPage(sub) {
 }
 
 function renderConta() {
-  const out = [pageHeader('Conta e backup', 'Sincronize o planner entre celular e computador e guarde uma cópia de segurança.')];
+  const out = [pageHeader(Store.managed ? 'Minha conta' : 'Conta e backup',
+    Store.managed ? null : 'Sincronize o planner entre celular e computador e guarde uma cópia de segurança.')];
   const cfg = Store.getConfig() || window.APP_CONFIG;
 
-  if (!Store.connected) {
+  if (Store.managed && Store.user) {
+    const pass = passwordInput('Mínimo 6 caracteres', 'new-password');
+    const msg = h('p', { class: 'form-msg', role: 'alert' });
+    out.push(card('Sua conta', null,
+      h('p', {}, 'Você entrou como ', h('strong', { text: Store.user.email })),
+      h('p', { class: 'card-text', text: 'Tudo o que você preenche é salvo automaticamente. Para acessar em outro aparelho, abra o app e entre com o mesmo e-mail e senha.' }),
+      h('button', { class: 'btn ghost', type: 'button', onclick: async () => { await Store.signOut(); go('inicio'); } }, 'Sair da conta')));
+    out.push(card('Alterar senha', null,
+      h('div', { class: 'fields' }, h('label', { class: 'field' }, h('span', { class: 'field-label', text: 'Nova senha' }), pass)),
+      msg,
+      h('button', { class: 'btn ghost', type: 'button', onclick: async () => {
+        if (pass.value.length < 6) { msg.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
+        const err = await Store.updatePassword(pass.value);
+        msg.textContent = err ? 'Não foi possível alterar a senha.' : 'Senha alterada.';
+        pass.value = '';
+      } }, 'Salvar nova senha')));
+  } else if (!Store.connected) {
     const url = h('input', { type: 'url', placeholder: 'https://xxxx.supabase.co', value: cfg?.url || '' });
     const key = h('input', { type: 'text', placeholder: 'chave pública (anon key)', value: cfg?.anonKey || '' });
     const msg = h('p', { class: 'form-msg' });
@@ -610,7 +636,7 @@ function renderConta() {
     } catch { alert('Arquivo inválido.'); }
   } });
 
-  out.push(card('Backup', 'Baixe uma cópia do planner para guardar ou levar para outro aparelho.',
+  if (!Store.managed) out.push(card('Backup', 'Baixe uma cópia do planner para guardar ou levar para outro aparelho.',
     h('div', { class: 'btn-row' },
       h('button', { class: 'btn', type: 'button', onclick: () => {
         const blob = new Blob([JSON.stringify(S(), null, 2)], { type: 'application/json' });
@@ -619,7 +645,6 @@ function renderConta() {
         URL.revokeObjectURL(a.href);
       } }, 'Baixar backup'),
       h('button', { class: 'btn ghost', type: 'button', onclick: () => file.click() }, 'Restaurar backup'),
-      h('button', { class: 'btn ghost', type: 'button', onclick: () => window.print() }, 'Imprimir página atual'),
       file)));
 
   out.push(card('Recomeçar', 'Apaga todas as informações preenchidas neste planner.',
@@ -630,6 +655,106 @@ function renderConta() {
       go('inicio');
     } }, 'Apagar tudo')));
   return out;
+}
+
+/* ---------- entrada (login e cadastro) ---------- */
+
+let recoveryMode = false;
+let authTab = 'entrar';
+let pendingNames = '';
+
+function authBrand() {
+  return h('div', { class: 'auth-brand' },
+    h('span', { class: 'brand-top', text: 'Universo' }),
+    h('span', { class: 'brand-mid', text: 'Noiva' }),
+    h('span', { class: 'brand-script', text: 'da Bi' }),
+    h('p', { class: 'auth-kicker', text: 'Planner completo de casamento' }));
+}
+
+function renderLoading() {
+  return h('div', { class: 'auth-wrap' }, h('div', { class: 'auth-card' }, authBrand(), h('p', { class: 'empty', text: 'Carregando…' })));
+}
+
+function passwordInput(placeholder, autocomplete) {
+  return h('input', { type: 'password', placeholder, autocomplete, minLength: 6 });
+}
+
+function renderAuth() {
+  const msg = h('p', { class: 'form-msg', role: 'alert' });
+  const email = h('input', { type: 'email', autocomplete: 'email', placeholder: 'seu@email.com', required: true });
+  const label = (text, input) => h('label', { class: 'field' }, h('span', { class: 'field-label', text }), input);
+  const tab = (id, text) => h('button', { type: 'button', class: 'auth-tab' + (authTab === id ? ' active' : ''), text,
+    onclick: () => { authTab = id; rerender(); } });
+
+  let form;
+  if (authTab === 'entrar') {
+    const pass = passwordInput('Sua senha', 'current-password');
+    form = h('form', { class: 'auth-form', onsubmit: async e => {
+      e.preventDefault();
+      msg.textContent = 'Entrando…';
+      const err = await Store.signIn(email.value.trim(), pass.value);
+      msg.textContent = !err ? '' : /confirm/i.test(err.message)
+        ? 'Confirme seu cadastro pelo link enviado ao seu e-mail.' : 'E-mail ou senha incorretos.';
+    } },
+      label('E-mail', email), label('Senha', pass), msg,
+      h('button', { class: 'btn', type: 'submit' }, 'Entrar'),
+      h('button', { class: 'btn link', type: 'button', onclick: () => { authTab = 'esqueci'; rerender(); } }, 'Esqueci minha senha'));
+  } else if (authTab === 'criar') {
+    const nomes = h('input', { type: 'text', placeholder: 'Ex.: Ana & Pedro', autocomplete: 'off' });
+    const pass = passwordInput('Mínimo 6 caracteres', 'new-password');
+    form = h('form', { class: 'auth-form', onsubmit: async e => {
+      e.preventDefault();
+      if (pass.value.length < 6) { msg.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
+      msg.textContent = 'Criando sua conta…';
+      pendingNames = nomes.value.trim();
+      const { error, needsConfirmation } = await Store.signUp(email.value.trim(), pass.value);
+      if (error) {
+        msg.textContent = /registered|exists/i.test(error.message) ? 'Este e-mail já tem conta. Use "Entrar".' : 'Não foi possível criar a conta. Tente novamente.';
+      } else if (needsConfirmation) {
+        msg.textContent = 'Conta criada! Enviamos um link de confirmação para o seu e-mail. Depois de confirmar, é só entrar.';
+      }
+    } },
+      label('Nome dos noivos', nomes), label('E-mail', email), label('Crie uma senha', pass), msg,
+      h('button', { class: 'btn', type: 'submit' }, 'Criar minha conta'));
+  } else {
+    form = h('form', { class: 'auth-form', onsubmit: async e => {
+      e.preventDefault();
+      msg.textContent = 'Enviando…';
+      const err = await Store.resetPassword(email.value.trim());
+      msg.textContent = err ? 'Não foi possível enviar. Confira o e-mail e tente novamente.'
+        : 'Pronto! Enviamos um link para você criar uma nova senha. Confira também a caixa de spam.';
+    } },
+      h('p', { class: 'card-text', text: 'Informe o e-mail da sua conta e enviaremos um link para criar uma nova senha.' }),
+      label('E-mail', email), msg,
+      h('button', { class: 'btn', type: 'submit' }, 'Enviar link'),
+      h('button', { class: 'btn link', type: 'button', onclick: () => { authTab = 'entrar'; rerender(); } }, 'Voltar para entrar'));
+  }
+
+  return h('div', { class: 'auth-wrap' }, h('div', { class: 'auth-card' },
+    authBrand(),
+    authTab === 'esqueci' ? h('h1', { class: 'auth-title', text: 'Recuperar senha' })
+      : h('div', { class: 'auth-tabs' }, tab('entrar', 'Entrar'), tab('criar', 'Criar conta')),
+    form,
+    h('p', { class: 'auth-note', text: 'Seu planner fica salvo na sua conta: acesse do celular ou do computador, de onde estiver.' })));
+}
+
+function renderNewPassword() {
+  const pass = passwordInput('Mínimo 6 caracteres', 'new-password');
+  const msg = h('p', { class: 'form-msg', role: 'alert' });
+  return h('div', { class: 'auth-wrap' }, h('div', { class: 'auth-card' },
+    authBrand(),
+    h('h1', { class: 'auth-title', text: 'Crie uma nova senha' }),
+    h('form', { class: 'auth-form', onsubmit: async e => {
+      e.preventDefault();
+      if (pass.value.length < 6) { msg.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
+      const err = await Store.updatePassword(pass.value);
+      if (err) { msg.textContent = 'Não foi possível salvar. Peça um novo link e tente de novo.'; return; }
+      recoveryMode = false;
+      go('inicio');
+      rerender();
+    } },
+      h('label', { class: 'field' }, h('span', { class: 'field-label', text: 'Nova senha' }), pass), msg,
+      h('button', { class: 'btn', type: 'submit' }, 'Salvar nova senha'))));
 }
 
 /* ---------- status de sincronização ---------- */
@@ -657,9 +782,18 @@ document.getElementById('scrim').addEventListener('click', () => document.body.c
 window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
 Store.onStatus(renderStatus);
 Store.onRemote(rerender);
+Store.onAuth(() => {
+  if (Store.user && pendingNames && !S().fields.noivos) {
+    S().fields.noivos = pendingNames;
+    Store.save();
+  }
+  pendingNames = '';
+  rerender();
+});
+Store.onRecovery(() => { recoveryMode = true; rerender(); });
 renderStatus('local');
 render();
-Store.connect().then(ok => { if (ok) rerender(); });
+Store.connect().then(rerender);
 
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   navigator.serviceWorker.register('sw.js').catch(() => {});

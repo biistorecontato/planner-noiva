@@ -218,6 +218,14 @@ function renderBlock(b) {
     case 'resumoFinanceiro': return renderFinanceSummary();
     case 'resumoConvidados': return renderGuestSummary();
     case 'encerramento': return renderClosing();
+    case 'dica': return renderTip(b);
+    case 'atalho': return card(b.titulo, b.texto, h('button', { class: 'btn', type: 'button', onclick: () => go(...b.destino) }, b.botao));
+    case 'ordensEntrada': return renderEntryOrders();
+    case 'sugestoesMusica': return renderSongSuggestions();
+    case 'saidas': return renderExits();
+    case 'paletas': return renderPalettes();
+    case 'ideias': return renderIdeas();
+    case 'divisaoOrcamento': return renderBudgetSplit();
   }
 }
 
@@ -257,8 +265,8 @@ function renderFields(b) {
     }))));
 }
 
-function renderChips(b) {
-  const selected = S().chips[b.chave] || (S().chips[b.chave] = []);
+function chipGroup(key, opcoes, onToggle) {
+  const selected = S().chips[key] || (S().chips[key] = []);
   const chip = opt => h('button', {
     type: 'button', class: 'chip' + (selected.includes(opt) ? ' on' : ''), text: opt, 'aria-pressed': String(selected.includes(opt)),
     onclick: e => {
@@ -267,10 +275,15 @@ function renderChips(b) {
       e.currentTarget.classList.toggle('on');
       e.currentTarget.setAttribute('aria-pressed', String(i < 0));
       Store.save();
+      if (onToggle) onToggle();
     },
   });
+  return h('div', { class: 'chips' }, opcoes.map(chip));
+}
+
+function renderChips(b) {
   return card(b.titulo, b.texto,
-    h('div', { class: 'chips' }, b.opcoes.map(chip)),
+    chipGroup(b.chave, b.opcoes),
     h('div', { class: 'fields' }, fieldInput(b.chave + '_outro', 'Outra palavra')));
 }
 
@@ -339,6 +352,15 @@ function renderTable(b) {
 
   const rowCard = (row) => {
     const i = rows.indexOf(row);
+    // Tabelas com "cores": cada linha vira um bloco com cor, número e nome próprios.
+    let head = null, onEdit = () => refreshSummaries();
+    if (b.cores) {
+      const base = b.rotuloNovo.replace('Adicionar ', '');
+      const titleOf = () => b.rotuloLinha(row) || `${base[0].toUpperCase() + base.slice(1)} ${i + 1}`;
+      const title = h('strong', { text: titleOf() });
+      head = h('div', { class: 'row-head' }, h('span', { class: 'row-badge', text: String(i + 1) }), title);
+      onEdit = () => { title.textContent = titleOf(); refreshSummaries(); };
+    }
     const tools = h('div', { class: 'row-tools' },
       b.ordenavel ? h('span', { class: 'row-num', text: String(i + 1) }) : null,
       b.ordenavel ? h('button', { class: 'icon-btn', type: 'button', title: 'Subir', 'aria-label': 'Subir', disabled: i === 0,
@@ -355,19 +377,20 @@ function renderTable(b) {
     const cells = b.colunas.map(([k, label, type, options]) => {
       if (type === 'select') {
         return h('label', { class: 'field' }, h('span', { class: 'field-label', text: label }),
-          h('select', { onchange: e => { row[k] = e.target.value; Store.save(); refreshSummaries(); } },
+          h('select', { onchange: e => { row[k] = e.target.value; Store.save(); onEdit(); } },
             h('option', { value: '', text: '—' }),
             options.map(o => h('option', { value: o, text: o, selected: row[k] === o }))));
       }
       if (type === 'check') {
         return h('label', { class: 'field check-field' },
-          h('input', { type: 'checkbox', checked: !!row[k], onchange: e => { row[k] = e.target.checked; Store.save(); refreshSummaries(); } }),
+          h('input', { type: 'checkbox', checked: !!row[k], onchange: e => { row[k] = e.target.checked; Store.save(); onEdit(); } }),
           h('span', { text: label }));
       }
-      const el = fieldInput(k, label, type || 'text', row, () => refreshSummaries());
-      return el;
+      return fieldInput(k, label, type || 'text', row, onEdit);
     });
-    return h('div', { class: 'row-card' }, tools, h('div', { class: 'row-fields' }, cells));
+    if (!b.cores) return h('div', { class: 'row-card' }, tools, h('div', { class: 'row-fields' }, cells));
+    const [bg, line] = CORES_LINHA[i % CORES_LINHA.length];
+    return h('div', { class: 'row-card tinted', style: `--tint:${bg};--tint-line:${line}` }, tools, head, h('div', { class: 'row-fields' }, cells));
   };
 
   const filters = b.filtroGrupo ? h('div', { class: 'filters' },
@@ -383,17 +406,15 @@ function renderTable(b) {
       h('span', { class: 'count', text: `${rows.length} ${rows.length === 1 ? 'item' : 'itens'}` })),
     b.texto ? h('p', { class: 'card-text', text: b.texto }) : null,
     filters,
-    shown.length ? h('div', { class: 'rows' }, shown.map(rowCard))
+    shown.length ? h('div', { class: 'rows' + (b.cores ? ' tinted-rows' : '') }, shown.map(rowCard))
       : h('p', { class: 'empty', text: rows.length ? 'Nada encontrado com esse filtro.' : 'Nenhum item ainda.' }),
     h('button', { class: 'btn', type: 'button', onclick: addRow }, icon('plus'), b.rotuloNovo || 'Adicionar'));
 }
 
 /* Atualiza os cards de resumo sem redesenhar a tela (preserva o foco). */
 function refreshSummaries() {
-  document.querySelectorAll('[data-summary]').forEach(el => {
-    const fresh = el.dataset.summary === 'finance' ? renderFinanceSummary() : renderGuestSummary();
-    el.replaceWith(fresh);
-  });
+  const renderers = { finance: renderFinanceSummary, guests: renderGuestSummary, budget: renderBudgetSplit };
+  document.querySelectorAll('[data-summary]').forEach(el => el.replaceWith(renderers[el.dataset.summary]()));
 }
 
 function stat(label, value, tone) {
@@ -408,6 +429,7 @@ function renderFinanceSummary() {
     h('div', { class: 'fields' }, fieldInput('orcamento_total', 'Orçamento total previsto', 'money', S().fields, () => {
       const el = document.querySelector('[data-summary="finance"] .stats');
       if (el) el.replaceWith(renderFinanceSummary().querySelector('.stats'));
+      document.querySelector('[data-summary="budget"]')?.replaceWith(renderBudgetSplit());
     })),
     h('div', { class: 'stats' },
       stat('Contratado', brl(fin.contratado)),
@@ -432,6 +454,124 @@ function renderGuestSummary() {
       stat('Não irão', g.naoVao),
       stat('Crianças', g.criancas),
       stat('Convites enviados', `${g.convites}/${g.nomes}`)));
+}
+
+function renderBudgetSplit() {
+  const fin = finance();
+  const body = fin.orcamento
+    ? h('table', { class: 'mini-table' },
+      h('thead', {}, h('tr', {}, h('th', { text: 'Categoria' }), h('th', { text: 'Sugerido' }), h('th', { text: 'Contratado' }))),
+      h('tbody', {}, DIVISAO_ORCAMENTO.map(([nome, p, cats]) => {
+        const sugerido = fin.orcamento * p / 100;
+        const contratado = cats.reduce((s, c) => s + (fin.porCategoria[c]?.total || 0), 0);
+        return h('tr', {}, h('td', {}, nome, h('small', { class: 'pct', text: ` ${p}%` })), h('td', { text: brl(sugerido) }),
+          h('td', { class: contratado > sugerido ? 'over' : '', text: brl(contratado) }));
+      })))
+    : h('p', { class: 'empty', text: 'Informem o orçamento total previsto para ver a divisão sugerida.' });
+  return h('section', { class: 'card', 'data-summary': 'budget' },
+    h('h2', { class: 'card-title', text: 'Divisão sugerida do orçamento' }),
+    h('p', { class: 'card-text', text: 'Um exemplo de divisão comum entre as categorias. Usem como referência e ajustem às prioridades de vocês.' }),
+    body);
+}
+
+function renderTip(b) {
+  return h('section', { class: 'card' },
+    h('h2', { class: 'card-title', text: b.titulo }),
+    h('ul', { class: 'tip-list' }, b.itens.map(([t, d]) => h('li', {}, h('strong', { text: t }), h('span', { text: d })))));
+}
+
+function renderEntryOrders() {
+  const use = o => {
+    const rows = table({ id: 'ordem' });
+    if (rows.some(rowHasData) && !confirm('Substituir a ordem de entrada atual por esta sugestão?')) return;
+    S().tables.ordem = o.itens.map(([quem]) => ({ id: uid(), quem }));
+    Store.save();
+    rerender();
+    document.querySelector('[data-table="ordem"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  return card('Sugestões de ordem de entrada', 'Três modelos para se inspirar. Escolham um para preencher a ordem de entrada e depois ajustem como quiserem.',
+    h('div', { class: 'opt-grid' }, ORDENS_ENTRADA.map(o => h('article', { class: 'opt-card' },
+      h('h3', { text: o.titulo }),
+      h('p', { class: 'opt-text', text: o.texto }),
+      h('ol', { class: 'opt-steps' }, o.itens.map(([quem, obs]) => h('li', {}, h('strong', { text: quem }), h('span', { text: obs })))),
+      h('p', { class: 'opt-tip', text: o.dica }),
+      h('button', { class: 'btn ghost sm', type: 'button', onclick: () => use(o) }, 'Usar esta ordem')))));
+}
+
+let songMoment = 'Entrada da noiva';
+
+function shortMoment(m) {
+  const s = m.replace(/^Entrada d[aeo]s? /, '');
+  return s[0].toUpperCase() + s.slice(1);
+}
+
+function renderSongSuggestions() {
+  const rows = table({ id: 'musicas' });
+  const sug = MUSICAS.find(m => m.momento === songMoment);
+  const row = rows.find(r => r.momento === sug.momento);
+  const choose = ([musica, versao]) => {
+    const target = row || (rows.unshift({ id: uid(), momento: sug.momento }), rows[0]);
+    Object.assign(target, { musica, versao });
+    Store.save();
+    rerender();
+  };
+  return card('Sugestões de músicas da Bi', 'Escolham o momento e toquem em uma música para colocá-la na lista de vocês.',
+    h('nav', { class: 'tabs' }, MUSICAS.map(m => h('button', { type: 'button', class: 'tab' + (m === sug ? ' active' : ''),
+      onclick: () => { songMoment = m.momento; rerender(); } }, h('span', { text: shortMoment(m.momento) })))),
+    h('ol', { class: 'song-list' }, sug.lista.map(s => {
+      const on = row && row.musica === s[0];
+      return h('li', { class: on ? 'on' : '' },
+        h('span', {}, h('strong', { text: s[0] }), h('small', { text: s[1] })),
+        h('button', { class: 'btn sm ' + (on ? '' : 'ghost'), type: 'button', onclick: () => choose(s) }, on ? 'Escolhida ♡' : 'Escolher'));
+    })),
+    h('div', { class: 'callout' }, h('strong', { text: 'Recomendação da Bi' }), h('p', { text: sug.dica })),
+    h('p', { class: 'card-text', text: 'Essas sugestões podem ser adaptadas ao estilo da cerimônia e ao formato de apresentação da banda.' }));
+}
+
+function renderExits() {
+  const f = S().fields;
+  return card('Inspirações para a saída dos noivos', 'Cada detalhe importa para que esse momento seja inesquecível.',
+    h('div', { class: 'opt-grid' }, SAIDAS.map(([nome, texto, orientacao]) => {
+      const on = f.saida_noivos === nome;
+      return h('article', { class: 'opt-card' + (on ? ' chosen' : '') },
+        h('h3', { text: nome }),
+        h('p', { class: 'opt-text', text: texto }),
+        h('p', { class: 'opt-tip' }, h('strong', { text: 'Orientação da cerimonialista: ' }), orientacao),
+        h('button', { class: 'btn sm ' + (on ? '' : 'ghost'), type: 'button', onclick: () => {
+          f.saida_noivos = on ? '' : nome;
+          Store.save();
+          rerender();
+        } }, on ? 'Escolhida ♡' : 'Escolher'));
+    })));
+}
+
+function renderPalettes() {
+  const f = S().fields;
+  return card('Paletas de cores para se inspirar', 'Fórmula simples para montar a paleta: 1 cor principal, 2 ou 3 tons de apoio, 1 base neutra e 1 tom de destaque (opcional).',
+    h('div', { class: 'opt-grid' }, PALETAS.map(p => {
+      const on = f.iv_paleta === p.nome;
+      return h('article', { class: 'opt-card' + (on ? ' chosen' : '') },
+        h('div', { class: 'swatches' }, p.cores.map(([nome, hex]) => h('span', { class: 'swatch', style: `background:${hex}`, title: nome }))),
+        h('h3', { text: p.nome }),
+        h('p', { class: 'opt-text', text: p.texto }),
+        h('button', { class: 'btn sm ' + (on ? '' : 'ghost'), type: 'button', onclick: () => {
+          f.iv_paleta = on ? '' : p.nome;
+          if (!on && !f.paleta) f.paleta = p.nome;
+          Store.save();
+          rerender();
+        } }, on ? 'Nossa paleta ♡' : 'Escolher esta paleta'));
+    })));
+}
+
+function renderIdeas() {
+  const total = () => IDEIAS.reduce((s, g) => s + (S().chips[g.chave] || []).length, 0);
+  const count = h('span', { class: 'count' });
+  const update = () => { const n = total(); count.textContent = n === 1 ? '1 ideia escolhida' : `${n} ideias escolhidas`; };
+  update();
+  return h('section', { class: 'card' },
+    h('div', { class: 'card-head' }, h('h2', { class: 'card-title', text: 'Ideias que queremos no nosso casamento' }), count),
+    h('p', { class: 'card-text', text: 'Toquem nas ideias que têm a cara de vocês. Inspirem-se, mas não tentem copiar: o casamento precisa contar a história de vocês.' }),
+    IDEIAS.map(g => h('div', { class: 'idea-group' }, h('h3', { text: g.titulo }), chipGroup(g.chave, g.opcoes, update))));
 }
 
 function renderClosing() {
@@ -531,6 +671,13 @@ function renderDashboard() {
       TEXTOS.recado.map(t => h('p', { text: t })),
       h('p', { class: 'card-text', text: TEXTOS.comoUsar }),
       h('p', { class: 'signature', text: 'Bi' })),
+    h('details', { class: 'card letter' },
+      h('summary', { text: 'Antes de casar, leia isso' }),
+      h('h3', { class: 'sub-title', text: 'A ordem inteligente do planejamento' }),
+      h('ol', { class: 'opt-steps' }, TEXTOS.ordemInteligente.map(t => h('li', {}, h('strong', { text: t })))),
+      h('p', { class: 'card-text', text: TEXTOS.prioridades }),
+      h('h3', { class: 'sub-title', text: '15 erros que os noivos cometem' }),
+      h('ul', { class: 'tip-list' }, TEXTOS.erros.map(([t, d]) => h('li', {}, h('strong', { text: t }), h('span', { text: d }))))),
   ];
 }
 
@@ -543,6 +690,10 @@ function renderChecklistPage(sub) {
     return h('a', { href: `#/checklist/${x.id}`, class: 'tab' + (x === p ? ' active' : '') + (x === cur ? ' current' : '') + (done === total ? ' complete' : '') },
       h('span', { text: x.titulo }), h('small', { text: `${done}/${total}` }));
   }));
+  requestAnimationFrame(() => {
+    const active = tabs.querySelector('.tab.active');
+    if (active) tabs.scrollLeft = active.offsetLeft - tabs.offsetLeft - 8;
+  });
   return [
     pageHeader('Checklist por período', `${prog.done} de ${prog.total} tarefas concluídas no total`),
     tabs,

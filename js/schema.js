@@ -177,6 +177,7 @@ const MUSICAS = [
 /* Vídeo do YouTube de cada sugestão ("Música|Artista" → id do vídeo), para o "Ouvir" já abrir tocando.
    null esconde o botão; sugestão fora desta lista abre a busca do YouTube. */
 const VIDEOS = {
+  'Senhor, Eu Quero Te Agradecer|versão instrumental / cerimônia': '8gKsfcIvnt0',
   'Canon in D|Pachelbel': 'Ptk_1Dc2iPY',
   'Primavera|Vivaldi': '3LiztfE1X7E',
   'Air on the G String|Bach': '1PkD47rNkfY',
@@ -251,6 +252,8 @@ const PALETAS = [
     texto: 'Intensa e elegante: romance, sofisticação e aconchego. Ideal para celebrações noturnas, clássicas ou de inverno.' },
   { nome: 'Marrom, marfim e bordô', cores: [['Bordô', '#5B1B1F'], ['Marrom escuro', '#4A2E1C'], ['Marrom amadeirado', '#8A5A30'], ['Marfim', '#EDE3D2'], ['Branco quente', '#F5F0E8']],
     texto: 'Acolhedora, sofisticada e atemporal, perfeita para casamentos elegantes e com personalidade.' },
+  { nome: 'Tropical: vermelho, pink, ameixa e laranja', cores: [['Vermelho', '#C8102E'], ['Pink', '#D81B8C'], ['Ameixa', '#8E1A63'], ['Laranja', '#EE7623']],
+    texto: 'Vibrante, alegre e cheia de vida: perfeita para casamentos ao ar livre, de dia ou de verão. Fica linda com madrinhas em cores diferentes da mesma paleta.' },
 ];
 
 const IDEIAS = [

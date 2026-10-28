@@ -713,20 +713,29 @@ function renderDashboard() {
 
 function renderChecklistPage(sub) {
   const cur = currentPeriod();
-  const p = PERIODOS.find(x => x.id === sub) || cur || PERIODOS[0];
+  const dia = PERIODOS.find(x => x.id === 'pdia');
+  // Aba "Para o grande dia": o checklist do dia (um período) e as listas da noiva, do noivo e do kit.
+  const grandeDia = [{ ...dia, aba: dia.titulo }, ...LISTAS_GRANDE_DIA];
+  const p = PERIODOS.find(x => x.id === sub) || LISTAS_GRANDE_DIA.find(x => x.id === sub) || cur || PERIODOS[0];
   const prog = overallProgress();
-  const tabs = h('nav', { class: 'tabs', 'aria-label': 'Períodos' }, PERIODOS.map(x => {
-    const { done, total } = periodProgress(x);
-    return h('a', { href: `#/checklist/${x.id}`, class: 'tab' + (x === p ? ' active' : '') + (x === cur ? ' current' : '') + (done === total ? ' complete' : '') },
-      h('span', { text: x.titulo }), h('small', { text: `${done}/${total}` }));
-  }));
-  requestAnimationFrame(() => {
-    const active = tabs.querySelector('.tab.active');
-    if (active) tabs.scrollLeft = active.offsetLeft - tabs.offsetLeft - 8;
-  });
+  const tab = (x, label) => {
+    const items = checklist(x.id, x.itens);
+    const done = items.filter(i => i.done).length;
+    return h('a', { href: `#/checklist/${x.id}`, class: 'tab' + (x.id === p.id ? ' active' : '') + (x.id === cur?.id ? ' current' : '') + (done === items.length ? ' complete' : '') },
+      h('span', { text: label }), h('small', { text: `${done}/${items.length}` }));
+  };
+  const tabRow = (titulo, list, labelOf) => {
+    const nav = h('nav', { class: 'tabs', 'aria-label': titulo }, list.map(x => tab(x, labelOf(x))));
+    requestAnimationFrame(() => {
+      const active = nav.querySelector('.tab.active');
+      if (active) nav.scrollLeft = active.offsetLeft - nav.offsetLeft - 8;
+    });
+    return h('div', { class: 'tab-group' }, h('span', { class: 'tab-group-label', text: titulo }), nav);
+  };
   return [
-    pageHeader('Checklist por período', `${prog.done} de ${prog.total} tarefas concluídas no total`),
-    tabs,
+    pageHeader('Checklist', `${prog.done} de ${prog.total} tarefas do planejamento concluídas`),
+    tabRow('Por período', PERIODOS.filter(x => x !== dia), x => x.titulo),
+    tabRow('Para o grande dia', grandeDia, x => x.aba),
     h('div', { class: 'period-head' },
       h('h2', { text: p.titulo }),
       h('p', { text: p.subtitulo }),

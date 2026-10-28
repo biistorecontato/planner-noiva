@@ -88,6 +88,28 @@ const PERIODOS = [
     notas: ['Quem cuida de cada coisa', 'Contatos de emergência (fornecedores e cerimonial)', 'Fotos que não podem faltar', 'O que queremos lembrar deste dia'] },
 ];
 
+/* Listas do grande dia: aparecem no Checklist (aba "Para o grande dia") e na tela "O grande dia". */
+const LISTAS_GRANDE_DIA = [
+  { id: 'noiva', titulo: 'Checklist da noiva', aba: 'Noiva', subtitulo: 'Tudo o que a noiva precisa ter em mãos no dia',
+    notas: ['Observações'],
+    itens: ['Vestido', 'Véu', 'Tiara ou acessório de cabelo', 'Sapato', 'Sandália para a festa', 'Buquê', 'Buquê para jogar', 'Joias',
+      'Perfume', 'Lingerie', 'Robe', 'Kit retoque', 'Documento', 'Votos', 'Alianças, se ficarem com a noiva', 'Celular', 'Carregador',
+      'Remédio, se necessário'] },
+  { id: 'noivo', titulo: 'Checklist do noivo', aba: 'Noivo', subtitulo: 'Tudo o que o noivo precisa ter em mãos no dia',
+    notas: ['Observações'],
+    itens: ['Traje', 'Camisa', 'Sapato', 'Meia', 'Cinto ou suspensório', 'Gravata ou borboleta', 'Lapela', 'Abotoaduras', 'Relógio',
+      'Perfume', 'Documento', 'Votos', 'Alianças, se ficarem com o noivo', 'Celular', 'Carregador'] },
+  { id: 'kit', titulo: 'Kit emergência', aba: 'Kit emergência', subtitulo: 'Para nada ficar para trás no grande dia',
+    observacao: ['Deixem o kit com uma pessoa de confiança (madrinha, mãe ou cerimonialista), e não com a noiva. Ela precisa saber onde ele está a qualquer momento.'],
+    notas: ['Responsável pelo kit'],
+    itens: ['Agulha e linha nas cores do vestido e do traje', 'Alfinetes e grampos de roupa', 'Tesoura pequena', 'Fita dupla face',
+      'Cola instantânea', 'Caneta tira-manchas', 'Lenços de papel', 'Lenços umedecidos', 'Remédio para dor de cabeça',
+      'Remédio para enjoo e azia', 'Curativos e protetor para bolhas nos pés', 'Absorvente', 'Escova ou pente',
+      'Grampos e elásticos de cabelo', 'Spray fixador', 'Maquiagem para retoque (pó, batom, corretivo)', 'Lixa e esmalte da cor usada',
+      'Desodorante', 'Fio dental', 'Chiclete ou bala', 'Sapatilha ou rasteirinha reserva', 'Carregador ou bateria portátil',
+      'Água', 'Lanche leve', 'Dinheiro trocado'] },
+];
+
 /* Conteúdo dos guias da Bi (Guia da cerimônia, Identidade dos noivos, Inspirações, Antes de casar). */
 
 const ORDENS_ENTRADA = [
@@ -413,16 +435,7 @@ const SECOES = [
         colunas: [['horario', 'Horário', 'time'], ['atividade', 'Atividade'], ['responsavel', 'Responsável'], ['obs', 'Observações']],
         padrao: ['Cabelo e maquiagem', 'Entrega do buquê', 'Making of', 'Chegada do fotógrafo', 'Chegada do noivo', 'Chegada da noiva',
           'Início da cerimônia', 'Fotos pós-cerimônia', 'Entrada na recepção', 'Jantar', 'Dança', 'Encerramento'].map(a => ({ atividade: a })) },
-      { tipo: 'checklist', id: 'noiva', titulo: 'Checklist da noiva', notas: ['Observações'],
-        itens: ['Vestido', 'Véu', 'Tiara ou acessório de cabelo', 'Sapato', 'Sandália para a festa', 'Buquê', 'Buquê para jogar', 'Joias', 'Perfume', 'Lingerie', 'Robe', 'Kit retoque', 'Documento', 'Votos',
-          'Alianças, se ficarem com a noiva', 'Celular', 'Carregador', 'Remédio, se necessário'] },
-      { tipo: 'checklist', id: 'noivo', titulo: 'Checklist do noivo', notas: ['Observações'],
-        itens: ['Traje', 'Camisa', 'Sapato', 'Meia', 'Gravata ou borboleta', 'Lapela', 'Relógio', 'Perfume', 'Documento', 'Votos',
-          'Alianças, se ficarem com o noivo', 'Celular', 'Carregador', 'Kit emergência'] },
-      { tipo: 'checklist', id: 'kit', titulo: 'Kit emergência', notas: ['Responsável pelo kit'],
-        itens: ['Agulha e linha', 'Alfinete', 'Lenço', 'Remédio para dor', 'Curativo', 'Cola instantânea', 'Tesoura pequena',
-          'Fita dupla face', 'Absorvente', 'Escova ou pente', 'Maquiagem para retoque', 'Desodorante', 'Chiclete ou bala',
-          'Carregador', 'Água', 'Lanche leve'] },
+      ...LISTAS_GRANDE_DIA.map(l => ({ tipo: 'checklist', ...l })),
     ],
   },
   {

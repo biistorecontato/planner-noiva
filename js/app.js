@@ -28,6 +28,22 @@ const num = v => (Number.isFinite(+v) ? +v : 0);
 const brl = v => num(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
 
+// Campo de dinheiro: "50000" vira "50.000"; a vírgula separa os centavos (até 2 casas).
+function moneyMask(text) {
+  const [int, ...dec] = text.replace(/\./g, '').replace(/[^\d,]/g, '').split(',');
+  const inteiro = int.replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return dec.length ? `${inteiro || '0'},${dec.join('').slice(0, 2)}` : inteiro;
+}
+const moneyValue = text => { const s = moneyMask(text).replace(/\./g, '').replace(',', '.'); return s && s !== '.' ? String(+s) : ''; };
+const moneyText = v => (v === '' || v == null || !Number.isFinite(+v) ? ''
+  : (+v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+// Recoloca o cursor depois de pôr os pontos, contando dígitos a partir do fim.
+function moneyCaret(text, digitsAfter) {
+  let pos = text.length;
+  for (let n = 0; pos > 0 && n < digitsAfter; pos--) if (/[\d,]/.test(text[pos - 1])) n++;
+  return pos;
+}
+
 function parseDate(iso) {
   if (!iso) return null;
   const [y, m, d] = iso.split('-').map(Number);
@@ -272,8 +288,20 @@ function fieldInput(key, label, type = 'text', store = S().fields, onChange, opt
       h('option', { value: '', text: '—' }),
       options.map(o => h('option', { value: o, text: o, selected: value === o })));
   } else if (type === 'money') {
+    // Mostra 50.000,00 enquanto digita, mas guarda o número puro (50000).
+    const onMoney = e => {
+      const el = e.target;
+      const digitsAfter = el.value.slice(el.selectionStart).replace(/[^\d,]/g, '').length;
+      el.value = moneyMask(el.value);
+      const pos = moneyCaret(el.value, digitsAfter);
+      el.setSelectionRange(pos, pos);
+      store[key] = moneyValue(el.value);
+      Store.save();
+      if (onChange) onChange(key, store[key]);
+    };
     input = h('div', { class: 'money' }, h('span', { text: 'R$' }),
-      h('input', { type: 'number', inputMode: 'decimal', step: '0.01', min: '0', value, oninput: update, 'aria-label': label }));
+      h('input', { type: 'text', inputMode: 'decimal', value: moneyText(value), oninput: onMoney,
+        onblur: e => { if (e.target.value) e.target.value = moneyText(moneyValue(e.target.value)); }, 'aria-label': label }));
   } else {
     input = h('input', { type: type === 'tel' ? 'tel' : type, value, oninput: update, 'aria-label': label,
       inputMode: type === 'number' ? 'numeric' : null, min: type === 'number' ? '0' : null });

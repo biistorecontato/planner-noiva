@@ -57,7 +57,7 @@ const PERIODOS = [
   { id: 'p2', meses: 2, titulo: '2 meses antes', subtitulo: 'Organização final dos convidados e fornecedores',
     itens: ['Confirmar presença dos convidados', 'Ajustar lista final de convidados', 'Revisar contratos dos fornecedores',
       'Definir layout das mesas', 'Definir lugares reservados para família', 'Comprar o champanhe para o brinde dos noivos',
-      'Providenciar as taças dos noivos (decoradas, se quiserem)', 'Providenciar a espátula para cortar o bolo (decorada, se quiserem)',
+      'Providenciar as taças dos noivos (decoradas, se quiserem)',
       'Providenciar os itens decorativos da mesa do bolo e do brinde',
       'Providenciar o buquê para jogar', 'Providenciar flores e cesta das daminhas', 'Providenciar lapela dos padrinhos', 'Providenciar o caderno de votos, se houver',
       'Comprar sandália para a festa', 'Finalizar detalhes da cerimônia', 'Revisar roteiro com cerimonialista', 'Conferir pagamentos pendentes'],

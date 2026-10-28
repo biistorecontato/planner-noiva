@@ -64,6 +64,9 @@ const ICONS = {
   up: 'M6 15l6-6 6 6',
   down: 'M6 9l6 6 6-6',
   menu: 'M4 7h16M4 12h16M4 17h16',
+  music: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM20 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM9 9l11-2',
+  civil: 'M6 3h9l3 3v15H6zM14 3v4h4M9 11h6M9 15h3M15 19.5l1.2-2.5 1.3 2.5',
+  play: 'M8 5.5v13l11-6.5z',
 };
 
 function icon(name, cls = 'icon') {
@@ -80,11 +83,28 @@ function icon(name, cls = 'icon') {
 /* ---------- acesso aos dados ---------- */
 
 function checklist(id, defaults) {
-  if (!S().checks[id]) S().checks[id] = defaults.map(text => ({ id: uid(), text, done: false, padrao: true }));
-  return S().checks[id];
+  const list = S().checks[id] || (S().checks[id] = []);
+  // Mantém listas já salvas em dia com o planner: itens padrão novos entram na posição certa,
+  // itens padrão que saíram do planner somem (a menos que já estejam marcados).
+  for (let i = list.length - 1; i >= 0; i--) {
+    if (list[i].padrao && !list[i].done && !defaults.includes(list[i].text)) list.splice(i, 1);
+  }
+  defaults.forEach((text, i) => {
+    if (list.some(x => x.text === text)) return;
+    const prev = i > 0 ? list.findIndex(x => x.text === defaults[i - 1]) : -1;
+    list.splice(prev + 1, 0, { id: uid(), text, done: false, padrao: true });
+  });
+  return list;
+}
+
+/* Definição da tabela no schema (com as linhas padrão), para quem a acessa só pelo id. */
+function tableDef(id) {
+  for (const s of SECOES) for (const b of s.blocos || []) if (b.tipo === 'tabela' && b.id === id) return b;
+  return { id };
 }
 
 function table(block) {
+  if (!block.colunas) block = tableDef(block.id);
   if (!S().tables[block.id]) S().tables[block.id] = (block.padrao || []).map(r => ({ id: uid(), ...r }));
   return S().tables[block.id];
 }
@@ -189,7 +209,7 @@ function render() {
   if (sec === 'inicio') content = renderDashboard();
   else if (sec === 'checklist') content = renderChecklistPage(sub);
   else if (sec === 'conta') content = renderConta();
-  else content = [pageHeader(def.titulo), ...def.blocos.map(renderBlock)];
+  else content = [pageHeader(def.titulo, def.subtitulo), ...def.blocos.map(renderBlock)];
   main.replaceChildren(...[].concat(content));
   renderNav();
   return scroll;
@@ -236,7 +256,7 @@ function card(title, text, ...body) {
     ...body);
 }
 
-function fieldInput(key, label, type = 'text', store = S().fields, onChange) {
+function fieldInput(key, label, type = 'text', store = S().fields, onChange, options) {
   const value = store[key] ?? '';
   const update = e => {
     const el = e.target;
@@ -247,6 +267,10 @@ function fieldInput(key, label, type = 'text', store = S().fields, onChange) {
   let input;
   if (type.startsWith('textarea')) {
     input = h('textarea', { rows: type === 'textarea-lg' ? 14 : 3, value, oninput: update, 'aria-label': label || 'Anotações' });
+  } else if (type === 'select') {
+    input = h('select', { onchange: update, 'aria-label': label },
+      h('option', { value: '', text: '—' }),
+      options.map(o => h('option', { value: o, text: o, selected: value === o })));
   } else if (type === 'money') {
     input = h('div', { class: 'money' }, h('span', { text: 'R$' }),
       h('input', { type: 'number', inputMode: 'decimal', step: '0.01', min: '0', value, oninput: update, 'aria-label': label }));
@@ -260,9 +284,9 @@ function fieldInput(key, label, type = 'text', store = S().fields, onChange) {
 
 function renderFields(b) {
   return card(b.titulo, b.texto, h('div', { class: 'fields' },
-    b.campos.map(([k, label, type]) => fieldInput(k, label, type, S().fields, key => {
+    b.campos.map(([k, label, type, options]) => fieldInput(k, label, type, S().fields, key => {
       if (key === 'noivos' || key === 'data') renderNav();
-    }))));
+    }, options))));
 }
 
 function chipGroup(key, opcoes, onToggle) {
@@ -509,20 +533,26 @@ function renderSongSuggestions() {
   const rows = table({ id: 'musicas' });
   const sug = MUSICAS.find(m => m.momento === songMoment);
   const row = rows.find(r => r.momento === sug.momento);
+  // Tocar de novo na música escolhida desfaz a escolha.
   const choose = ([musica, versao]) => {
     const target = row || (rows.unshift({ id: uid(), momento: sug.momento }), rows[0]);
-    Object.assign(target, { musica, versao });
+    Object.assign(target, target.musica === musica ? { musica: '', versao: '' } : { musica, versao });
     Store.save();
     rerender();
   };
-  return card('Sugestões de músicas da Bi', 'Escolham o momento e toquem em uma música para colocá-la na lista de vocês.',
+  // Cada sugestão pode trazer um link próprio; sem ele, abre a busca do YouTube.
+  const youtube = ([musica, autor, url]) => url || 'https://www.youtube.com/results?search_query=' + encodeURIComponent(`${musica} ${autor}`);
+  return card('Sugestões de músicas da Bi', 'Escolham o momento, ouçam a prévia e toquem em "Escolher". Para desfazer, toquem de novo em "Escolhida".',
     h('nav', { class: 'tabs' }, MUSICAS.map(m => h('button', { type: 'button', class: 'tab' + (m === sug ? ' active' : ''),
       onclick: () => { songMoment = m.momento; rerender(); } }, h('span', { text: shortMoment(m.momento) })))),
     h('ol', { class: 'song-list' }, sug.lista.map(s => {
       const on = row && row.musica === s[0];
       return h('li', { class: on ? 'on' : '' },
         h('span', {}, h('strong', { text: s[0] }), h('small', { text: s[1] })),
-        h('button', { class: 'btn sm ' + (on ? '' : 'ghost'), type: 'button', onclick: () => choose(s) }, on ? 'Escolhida ♡' : 'Escolher'));
+        h('a', { class: 'btn sm link-yt', href: youtube(s), target: '_blank', rel: 'noopener', 'aria-label': `Ouvir ${s[0]} no YouTube` },
+          icon('play'), 'Ouvir'),
+        h('button', { class: 'btn sm ' + (on ? '' : 'ghost'), type: 'button', 'aria-pressed': String(!!on),
+          title: on ? 'Tocar para desfazer a escolha' : null, onclick: () => choose(s) }, on ? 'Escolhida ✕' : 'Escolher'));
     })),
     h('div', { class: 'callout' }, h('strong', { text: 'Recomendação da Bi' }), h('p', { text: sug.dica })),
     h('p', { class: 'card-text', text: 'Essas sugestões podem ser adaptadas ao estilo da cerimônia e ao formato de apresentação da banda.' }));

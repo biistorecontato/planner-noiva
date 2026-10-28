@@ -267,6 +267,16 @@ button.tab { cursor: pointer; font: inherit; color: inherit; }
 .song-list strong { font-weight: 500; }
 .song-list small { color: var(--muted); }
 .song-list li.on strong { color: var(--gold-deep); }
+.song-list li.on { background: #FDF8EE; }
+.btn.link-yt { background: #fff; color: #B3261E; border-color: #EBC9C5; text-decoration: none; padding: 6px 14px; }
+.btn.link-yt:hover { background: #FCEFEE; }
+.btn.link-yt .icon { width: 14px; height: 14px; fill: currentColor; stroke: none; }
+@media (max-width: 480px) {
+  .song-list li { flex-wrap: wrap; row-gap: 8px; }
+  .song-list li > span { flex-basis: calc(100% - 42px); }
+  .song-list li .btn { flex: 1; }
+  .song-list li .link-yt { margin-left: 42px; }
+}
 
 .idea-group + .idea-group { margin-top: 18px; }
 .idea-group h3 { font-family: var(--caps); font-weight: 500; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }

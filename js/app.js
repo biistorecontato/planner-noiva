@@ -540,8 +540,13 @@ function renderSongSuggestions() {
     Store.save();
     rerender();
   };
-  // Cada sugestão pode trazer um link próprio; sem ele, abre a busca do YouTube.
-  const youtube = ([musica, autor, url]) => url || 'https://www.youtube.com/results?search_query=' + encodeURIComponent(`${musica} ${autor}`);
+  // Com vídeo cadastrado, abre direto tocando; sem ele, abre a busca do YouTube.
+  const youtube = ([musica, autor]) => {
+    const id = VIDEOS[`${musica}|${autor}`];
+    if (id === null) return null;
+    return id ? `https://www.youtube.com/watch?v=${id}`
+      : 'https://www.youtube.com/results?search_query=' + encodeURIComponent(`${musica} ${autor}`);
+  };
   return card('Sugestões de músicas da Bi', 'Escolham o momento, ouçam a prévia e toquem em "Escolher". Para desfazer, toquem de novo em "Escolhida".',
     h('nav', { class: 'tabs' }, MUSICAS.map(m => h('button', { type: 'button', class: 'tab' + (m === sug ? ' active' : ''),
       onclick: () => { songMoment = m.momento; rerender(); } }, h('span', { text: shortMoment(m.momento) })))),
@@ -549,8 +554,8 @@ function renderSongSuggestions() {
       const on = row && row.musica === s[0];
       return h('li', { class: on ? 'on' : '' },
         h('span', {}, h('strong', { text: s[0] }), h('small', { text: s[1] })),
-        h('a', { class: 'btn sm link-yt', href: youtube(s), target: '_blank', rel: 'noopener', 'aria-label': `Ouvir ${s[0]} no YouTube` },
-          icon('play'), 'Ouvir'),
+        youtube(s) ? h('a', { class: 'btn sm link-yt', href: youtube(s), target: '_blank', rel: 'noopener', 'aria-label': `Ouvir ${s[0]} no YouTube` },
+          icon('play'), 'Ouvir') : null,
         h('button', { class: 'btn sm ' + (on ? '' : 'ghost'), type: 'button', 'aria-pressed': String(!!on),
           title: on ? 'Tocar para desfazer a escolha' : null, onclick: () => choose(s) }, on ? 'Escolhida ✕' : 'Escolher'));
     })),

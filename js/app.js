@@ -114,6 +114,15 @@ function checklist(id, defaults) {
   for (let i = list.length - 1; i >= 0; i--) {
     if (list[i].padrao && !list[i].done && !defaults.includes(list[i].text)) list.splice(i, 1);
   }
+  const seen = new Map();
+  for (let i = 0; i < list.length; i++) {
+    const x = list[i];
+    if (!x.padrao) continue;
+    const first = seen.get(x.text);
+    if (!first) { seen.set(x.text, x); continue; }
+    first.done = first.done || x.done;
+    list.splice(i--, 1);
+  }
   defaults.forEach((text, i) => {
     if (list.some(x => x.text === text)) return;
     const prev = i > 0 ? list.findIndex(x => x.text === defaults[i - 1]) : -1;
@@ -239,7 +248,7 @@ function render() {
   else if (sec === 'checklist') content = renderChecklistPage(sub);
   else if (sec === 'conta') content = renderConta();
   else if (sec === 'premium') content = renderPremiumPage();
-  else if (trancada(sec)) content = [pageHeader(def.titulo, 'Disponível no Planner Premium'), premiumCard(def.titulo, PREMIUM[sec])];
+  else if (trancada(sec)) content = renderLocked(def);
   else content = [pageHeader(def.titulo, def.subtitulo), ...def.blocos.map(renderBlock)];
   main.replaceChildren(...[].concat(content).filter(x => x != null));
   renderNav();
@@ -363,6 +372,7 @@ function renderChecklist(id, defaults, opts = {}) {
       h('label', {},
         h('input', { type: 'checkbox', checked: item.done, onchange: e => { item.done = e.target.checked; Store.save(); rerender(); } }),
         h('span', { text: item.text })),
+      item.padrao && ATALHOS_CHECKLIST[item.text] ? itemShortcut(...ATALHOS_CHECKLIST[item.text]) : null,
       item.padrao ? null : h('button', { class: 'icon-btn', type: 'button', title: 'Remover item', 'aria-label': 'Remover item',
         onclick: () => { items.splice(items.indexOf(item), 1); Store.save(); rerender(); } }, icon('trash')))));
   const addInput = h('input', { type: 'text', placeholder: 'Adicionar outro item…', 'aria-label': 'Novo item' });
@@ -383,6 +393,11 @@ function renderChecklist(id, defaults, opts = {}) {
     list,
     h('div', { class: 'add-row' }, addInput, h('button', { class: 'btn ghost', type: 'button', onclick: add }, icon('plus'), 'Adicionar')),
     opts.notas ? h('div', { class: 'fields' }, opts.notas.map((n, i) => fieldInput(`${id}_nota_${i}`, n, 'textarea'))) : null);
+}
+
+function itemShortcut(sec, label) {
+  return h('a', { class: 'item-link' + (trancada(sec) ? ' locked' : ''), href: '#/' + sec },
+    trancada(sec) ? icon('lock', 'icon') : null, label, trancada(sec) ? h('em', { text: 'Premium' }) : null);
 }
 
 function progressBar(done, total) {
@@ -548,7 +563,7 @@ function renderTip(b) {
     h('ul', { class: 'tip-list' }, b.itens.map(([t, d]) => h('li', {}, h('strong', { text: t }), h('span', { text: d })))));
 }
 
-function renderEntryOrders() {
+function renderEntryOrders(limite) {
   const use = o => {
     const rows = table({ id: 'ordem' });
     if (rows.some(rowHasData) && !confirm('Substituir a ordem de entrada atual por esta sugestão?')) return;
@@ -558,12 +573,12 @@ function renderEntryOrders() {
     document.querySelector('[data-table="ordem"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
   return card('Sugestões de ordem de entrada', 'Três modelos para se inspirar. Escolham um para preencher a ordem de entrada e depois ajustem como quiserem.',
-    h('div', { class: 'opt-grid' }, ORDENS_ENTRADA.map(o => h('article', { class: 'opt-card' },
+    h('div', { class: 'opt-grid' }, ORDENS_ENTRADA.slice(0, limite).map(o => h('article', { class: 'opt-card' },
       h('h3', { text: o.titulo }),
       h('p', { class: 'opt-text', text: o.texto }),
       h('ol', { class: 'opt-steps' }, o.itens.map(([quem, obs]) => h('li', {}, h('strong', { text: quem }), h('span', { text: obs })))),
       h('p', { class: 'opt-tip', text: o.dica }),
-      h('button', { class: 'btn ghost sm', type: 'button', onclick: () => use(o) }, 'Usar esta ordem')))));
+      limite ? null : h('button', { class: 'btn ghost sm', type: 'button', onclick: () => use(o) }, 'Usar esta ordem')))));
 }
 
 let songMoment = 'Entrada da noiva';
@@ -573,7 +588,7 @@ function shortMoment(m) {
   return s[0].toUpperCase() + s.slice(1);
 }
 
-function renderSongSuggestions() {
+function renderSongSuggestions(limite) {
   const rows = table({ id: 'musicas' });
   const sug = MUSICAS.find(m => m.momento === songMoment);
   const row = rows.find(r => r.momento === sug.momento);
@@ -594,15 +609,16 @@ function renderSongSuggestions() {
   return card('Sugestões de músicas da Bi', 'Escolham o momento, ouçam a prévia e toquem em "Escolher". Para desfazer, toquem de novo em "Escolhida".',
     h('nav', { class: 'tabs' }, MUSICAS.map(m => h('button', { type: 'button', class: 'tab' + (m === sug ? ' active' : ''),
       onclick: () => { songMoment = m.momento; rerender(); } }, h('span', { text: shortMoment(m.momento) })))),
-    h('ol', { class: 'song-list' }, sug.lista.map(s => {
+    h('ol', { class: 'song-list' }, sug.lista.slice(0, limite).map(s => {
       const on = row && row.musica === s[0];
       return h('li', { class: on ? 'on' : '' },
         h('span', {}, h('strong', { text: s[0] }), h('small', { text: s[1] })),
         youtube(s) ? h('a', { class: 'btn sm link-yt', href: youtube(s), target: '_blank', rel: 'noopener', 'aria-label': `Ouvir ${s[0]} no YouTube` },
           icon('play'), 'Ouvir') : null,
-        h('button', { class: 'btn sm ' + (on ? '' : 'ghost'), type: 'button', 'aria-pressed': String(!!on),
+        limite ? null : h('button', { class: 'btn sm ' + (on ? '' : 'ghost'), type: 'button', 'aria-pressed': String(!!on),
           title: on ? 'Tocar para desfazer a escolha' : null, onclick: () => choose(s) }, on ? 'Escolhida ✕' : 'Escolher'));
     })),
+    limite ? h('p', { class: 'more-note', text: `+ ${sug.lista.length - limite} sugestões para este momento no Premium` }) : null,
     h('div', { class: 'callout' }, h('strong', { text: 'Recomendação da Bi' }), h('p', { text: sug.dica })),
     h('p', { class: 'card-text', text: 'Essas sugestões podem ser adaptadas ao estilo da cerimônia e ao formato de apresentação da banda.' }));
 }
@@ -624,22 +640,23 @@ function renderExits() {
     })));
 }
 
-function renderPalettes() {
+function renderPalettes(limite) {
   const f = S().fields;
   return card('Paletas de cores para se inspirar', 'Fórmula simples para montar a paleta: 1 cor principal, 2 ou 3 tons de apoio, 1 base neutra e 1 tom de destaque (opcional).',
-    h('div', { class: 'opt-grid' }, PALETAS.map(p => {
+    h('div', { class: 'opt-grid' }, PALETAS.slice(0, limite).map(p => {
       const on = f.iv_paleta === p.nome;
       return h('article', { class: 'opt-card' + (on ? ' chosen' : '') },
         h('div', { class: 'swatches' }, p.cores.map(([nome, hex]) => h('span', { class: 'swatch', style: `background:${hex}`, title: nome }))),
         h('h3', { text: p.nome }),
         h('p', { class: 'opt-text', text: p.texto }),
-        h('button', { class: 'btn sm ' + (on ? '' : 'ghost'), type: 'button', onclick: () => {
+        limite ? null : h('button', { class: 'btn sm ' + (on ? '' : 'ghost'), type: 'button', onclick: () => {
           f.iv_paleta = on ? '' : p.nome;
           if (!on && !f.paleta) f.paleta = p.nome;
           Store.save();
           rerender();
         } }, on ? 'Nossa paleta ♡' : 'Escolher esta paleta'));
-    })));
+    })),
+    limite ? h('p', { class: 'more-note', text: `+ ${PALETAS.length - limite} paletas no Premium` }) : null);
 }
 
 function renderIdeas() {
@@ -668,6 +685,22 @@ function premiumCard(title, itens) {
     itens && typeof itens !== 'string' ? h('ul', { class: 'premium-list' }, itens.map(t => h('li', { text: t }))) : null,
     h('p', { class: 'card-text', text: 'Ao fazer o upgrade, tudo o que vocês já preencheram continua aqui.' }),
     upgradeButton());
+}
+
+const AMOSTRAS = {
+  musicas: () => renderSongSuggestions(2),
+  identidade: () => renderPalettes(2),
+  cerimonia: () => renderEntryOrders(1),
+};
+
+function renderLocked(def) {
+  const amostra = AMOSTRAS[def.id];
+  return [
+    pageHeader(def.titulo, amostra ? 'Uma amostra do Planner Premium' : 'Disponível no Planner Premium'),
+    amostra ? amostra() : null,
+    premiumCard(amostra ? 'Tem muito mais no Premium' : def.titulo, PREMIUM[def.id]),
+    h('div', { class: 'locked-preview', inert: '', 'aria-hidden': 'true' }, def.blocos.map(renderBlock)),
+  ];
 }
 
 function renderPremiumPage() {
@@ -849,6 +882,9 @@ function renderConta() {
         msg.textContent = err ? 'Não foi possível alterar a senha.' : 'Senha alterada.';
         pass.value = '';
       } }, 'Salvar nova senha')));
+  } else if (BASICO) {
+    out.push(premiumCard('Planejem juntos, de qualquer aparelho', ['Noivo e noiva com o mesmo login, cada um no seu celular',
+      'Tudo salvo na nuvem: trocar de celular não apaga nada', 'Abra no computador e continue de onde parou']));
   } else if (!Store.connected) {
     const url = h('input', { type: 'url', placeholder: 'https://xxxx.supabase.co', value: cfg?.url || '' });
     const key = h('input', { type: 'text', placeholder: 'chave pública (anon key)', value: cfg?.anonKey || '' });
@@ -933,16 +969,17 @@ function renderConta() {
 
 /* ---------- entrada (login e cadastro) ---------- */
 
-let recoveryMode = false;
+// Link de convite ou de nova senha: o Supabase lê o endereço logo ao abrir, então guardamos antes.
+let inviteMode = /type=invite/.test(location.hash);
+let recoveryMode = inviteMode || /type=recovery/.test(location.hash);
 let authTab = 'entrar';
-let pendingNames = '';
 
 function authBrand() {
   return h('div', { class: 'auth-brand' },
     h('span', { class: 'brand-top', text: 'Universo' }),
     h('span', { class: 'brand-mid', text: 'Noiva' }),
     h('span', { class: 'brand-script', text: 'da Bi' }),
-    h('p', { class: 'auth-kicker', text: 'Planner completo de casamento' }));
+    h('p', { class: 'auth-kicker', text: 'Planner Premium de casamento' }));
 }
 
 function renderLoading() {
@@ -957,8 +994,6 @@ function renderAuth() {
   const msg = h('p', { class: 'form-msg', role: 'alert' });
   const email = h('input', { type: 'email', autocomplete: 'email', placeholder: 'seu@email.com', required: true });
   const label = (text, input) => h('label', { class: 'field' }, h('span', { class: 'field-label', text }), input);
-  const tab = (id, text) => h('button', { type: 'button', class: 'auth-tab' + (authTab === id ? ' active' : ''), text,
-    onclick: () => { authTab = id; rerender(); } });
 
   let form;
   if (authTab === 'entrar') {
@@ -973,23 +1008,6 @@ function renderAuth() {
       label('E-mail', email), label('Senha', pass), msg,
       h('button', { class: 'btn', type: 'submit' }, 'Entrar'),
       h('button', { class: 'btn link', type: 'button', onclick: () => { authTab = 'esqueci'; rerender(); } }, 'Esqueci minha senha'));
-  } else if (authTab === 'criar') {
-    const nomes = h('input', { type: 'text', placeholder: 'Ex.: Ana & Pedro', autocomplete: 'off' });
-    const pass = passwordInput('Mínimo 6 caracteres', 'new-password');
-    form = h('form', { class: 'auth-form', onsubmit: async e => {
-      e.preventDefault();
-      if (pass.value.length < 6) { msg.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
-      msg.textContent = 'Criando sua conta…';
-      pendingNames = nomes.value.trim();
-      const { error, needsConfirmation } = await Store.signUp(email.value.trim(), pass.value);
-      if (error) {
-        msg.textContent = /registered|exists/i.test(error.message) ? 'Este e-mail já tem conta. Use "Entrar".' : 'Não foi possível criar a conta. Tente novamente.';
-      } else if (needsConfirmation) {
-        msg.textContent = 'Conta criada! Enviamos um link de confirmação para o seu e-mail. Depois de confirmar, é só entrar.';
-      }
-    } },
-      label('Nome dos noivos', nomes), label('E-mail', email), label('Crie uma senha', pass), msg,
-      h('button', { class: 'btn', type: 'submit' }, 'Criar minha conta'));
   } else {
     form = h('form', { class: 'auth-form', onsubmit: async e => {
       e.preventDefault();
@@ -1006,10 +1024,10 @@ function renderAuth() {
 
   return h('div', { class: 'auth-wrap' }, h('div', { class: 'auth-card' },
     authBrand(),
-    authTab === 'esqueci' ? h('h1', { class: 'auth-title', text: 'Recuperar senha' })
-      : h('div', { class: 'auth-tabs' }, tab('entrar', 'Entrar'), tab('criar', 'Criar conta')),
+    h('h1', { class: 'auth-title', text: authTab === 'esqueci' ? 'Recuperar senha' : 'Entrar no planner' }),
     form,
-    h('p', { class: 'auth-note', text: 'Seu planner fica salvo na sua conta: acesse do celular ou do computador, de onde estiver.' })));
+    h('p', { class: 'auth-note', text: 'Use o e-mail da compra. Noivo e noiva podem entrar com o mesmo e-mail e senha, cada um no seu celular.' }),
+    h('p', { class: 'auth-note', text: 'Ainda não recebeu seu acesso? Confira o spam ou fale com a Bi.' })));
 }
 
 function renderNewPassword() {
@@ -1017,13 +1035,13 @@ function renderNewPassword() {
   const msg = h('p', { class: 'form-msg', role: 'alert' });
   return h('div', { class: 'auth-wrap' }, h('div', { class: 'auth-card' },
     authBrand(),
-    h('h1', { class: 'auth-title', text: 'Crie uma nova senha' }),
+    h('h1', { class: 'auth-title', text: inviteMode ? 'Bem-vindos! Criem sua senha' : 'Crie uma nova senha' }),
     h('form', { class: 'auth-form', onsubmit: async e => {
       e.preventDefault();
       if (pass.value.length < 6) { msg.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
       const err = await Store.updatePassword(pass.value);
       if (err) { msg.textContent = 'Não foi possível salvar. Peça um novo link e tente de novo.'; return; }
-      recoveryMode = false;
+      recoveryMode = inviteMode = false;
       go('inicio');
       rerender();
     } },
@@ -1056,14 +1074,7 @@ document.getElementById('scrim').addEventListener('click', () => document.body.c
 window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
 Store.onStatus(renderStatus);
 Store.onRemote(rerender);
-Store.onAuth(() => {
-  if (Store.user && pendingNames && !S().fields.noivos) {
-    S().fields.noivos = pendingNames;
-    Store.save();
-  }
-  pendingNames = '';
-  rerender();
-});
+Store.onAuth(rerender);
 Store.onRecovery(() => { recoveryMode = true; rerender(); });
 renderStatus('local');
 render();

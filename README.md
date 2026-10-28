@@ -8,16 +8,21 @@ e anotações. Funciona no computador e no celular (pode ser instalado na tela i
 
 Abra o arquivo `index.html` no navegador. Os dados ficam salvos no próprio aparelho.
 
-## Banco de dados (Supabase): para acessar de qualquer aparelho
+## Duas edições
+
+- **Premium**: `index.html` (raiz). Com o Supabase configurado, pede login; noivo e noiva usam o mesmo e-mail e senha.
+- **Essencial**: `basico/index.html`. Mesmo código, com as seções de `PREMIUM` (em `js/schema.js`) trancadas. Nunca usa login: salva só no aparelho.
+- O link do botão de compra fica em `window.UPGRADE_URL`, em `js/config.js`.
+
+## Banco de dados (Supabase): login do Premium
 
 1. Crie uma conta e um projeto em https://supabase.com.
 2. No projeto, abra **SQL Editor > New query**, cole o conteúdo de `supabase/schema.sql` e clique em **Run**.
-3. Em **Project Settings > API**, copie a **Project URL** e a chave **anon public**.
-4. Cole esses dois valores em `js/config.js` (assim todos os noivos já abrem o app conectados).
-   Também é possível colar direto no app, em **Conta e backup**.
-5. Em **Authentication > URL Configuration**, coloque em **Site URL** e em **Redirect URLs** o endereço do app: `https://biistorecontato.github.io/planner-noiva/` (é para onde vão os links de confirmação e de nova senha).
-6. Pronto: ao abrir o app, as clientes veem a tela de **Entrar / Criar conta** e cadastram e-mail e senha.
-   Cada conta só enxerga o próprio planner.
+3. Em **Project Settings > API**, copie a **Project URL** e a chave **anon public** e cole em `js/config.js`.
+4. Em **Authentication > URL Configuration**, coloque em **Site URL** e em **Redirect URLs** o endereço do app: `https://biistorecontato.github.io/planner-noiva/`.
+5. Em **Authentication > Sign In / Providers**, desligue **Allow new users to sign up**: só entra quem comprou.
+6. A cada venda: **Authentication > Users > Add user > Send invitation**, com o e-mail da compradora.
+   Ela recebe o convite, cria a senha no app e já entra. Cada conta só enxerga o próprio planner.
 
 Para não exigir confirmação por e-mail no cadastro: **Authentication > Sign In / Providers > Email > Confirm email** (desligar).
 

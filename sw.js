@@ -1,5 +1,5 @@
 /* Service worker: guarda os arquivos do app para abrir mesmo sem internet. */
-const CACHE = 'planner-noiva-v12';
+const CACHE = 'planner-noiva-v13';
 const ASSETS = ['./', 'index.html', 'css/styles.css', 'js/config.js', 'js/schema.js', 'js/store.js', 'js/app.js',
   'icons/icon.svg', 'manifest.webmanifest'];
 

@@ -509,6 +509,27 @@ const SECOES = [
   { id: 'conta', titulo: 'Conta e backup', icone: 'cloud' },
 ];
 
+/* Itens do checklist com atalho para a seção que ajuda a resolvê-los (no Essencial, viram convite para o Premium). */
+const ATALHOS_CHECKLIST = {
+  'Começar a pesquisar fornecedores principais': ['fornecedores', 'Controle de fornecedores'],
+  'Definir identidade visual inicial': ['identidade', 'Identidade visual'],
+  'Escolher paleta de cores': ['identidade', 'Ver paletas'],
+  'Pensar nas músicas da cerimônia': ['musicas', 'Ouvir sugestões'],
+  'Alinhar o repertório com a banda ou DJ': ['musicas', 'Músicas escolhidas'],
+  'Consultar o cartório e agendar a data do casamento civil': ['civil', 'Prazos e documentos'],
+  'Definir ordem de entrada da cerimônia': ['cerimonia', 'Sugestões de ordem'],
+  'Organizar documentos necessários': ['civil', 'Lista de documentos'],
+  'Dar entrada na habilitação do casamento civil': ['civil', 'Passo a passo'],
+  'Definir músicas da cerimônia': ['musicas', 'Ouvir sugestões'],
+  'Definir músicas da festa': ['musicas', 'Ouvir sugestões'],
+  'Planejar entrada dos noivos': ['cerimonia', 'Guia da cerimônia'],
+  'Planejar saída dos noivos': ['cerimonia', 'Ideias para a saída'],
+  'Revisar contratos dos fornecedores': ['fornecedores', 'Controle de fornecedores'],
+  'Montar cronograma do dia': ['grandedia', 'Cronograma do dia'],
+  'Confirmar todos os fornecedores': ['fornecedores', 'Controle de fornecedores'],
+  'Revisar cronograma com cerimonial': ['grandedia', 'Cronograma do dia'],
+};
+
 /* Versão básica (Planner Essencial): estas seções ficam com cadeado e mostram o que o Premium traz. */
 const PREMIUM = {
   fornecedores: ['Controle de todos os fornecedores, cada um com a sua cor', 'Comparativo de orçamentos lado a lado',

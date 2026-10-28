@@ -346,7 +346,7 @@ const SECOES = [
         colunas: [['fornecedor', 'Fornecedor'], ['categoria', 'Categoria', 'select', CATEGORIAS], ['total', 'Valor total', 'money'],
           ['pago', 'Valor já pago', 'money'], ['parcelas', 'Parcelas'], ['vencimento', 'Próximo vencimento', 'date'],
           ['quitado', 'Quitado', 'check']] },
-      { tipo: 'divisaoOrcamento' },
+      { tipo: 'divisaoOrcamento', premium: 'Divisão sugerida do orçamento' },
       { tipo: 'campos', campos: [['obs_financeiro', 'Observações financeiras', 'textarea']] },
     ],
   },
@@ -508,6 +508,21 @@ const SECOES = [
   },
   { id: 'conta', titulo: 'Conta e backup', icone: 'cloud' },
 ];
+
+/* Versão básica (Planner Essencial): estas seções ficam com cadeado e mostram o que o Premium traz. */
+const PREMIUM = {
+  fornecedores: ['Controle de todos os fornecedores, cada um com a sua cor', 'Comparativo de orçamentos lado a lado',
+    'Dicas da Bi para escolher e contratar com segurança'],
+  cerimonia: ['Guia completo da cerimônia', '3 sugestões de ordem de entrada', 'Ordem de entrada pronta para editar',
+    'Ideias para a saída dos noivos', 'Checklist completo da cerimônia'],
+  musicas: ['Mais de 40 sugestões de músicas para cada momento', 'Botão "Ouvir" com versões instrumentais no YouTube',
+    'Lista das músicas escolhidas para entregar à banda ou DJ'],
+  civil: ['Com quanto tempo agendar o cartório', 'Lista de documentos', 'Regime de bens explicado de forma simples',
+    'Checklist do casamento civil'],
+  identidade: ['8 paletas de cores com inspirações', 'Onde aplicar a identidade do casamento', 'Ideias e erros que vale evitar'],
+  grandedia: ['Cronograma hora a hora do grande dia', 'Checklist da noiva e do noivo', 'Kit emergência',
+    'Checklist do dia do casamento'],
+};
 
 const TEXTOS = {
   recadoTitulo: 'Planejar com antecedência é um ato de carinho com o seu grande dia.',

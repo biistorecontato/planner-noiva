@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Planner Essencial — Universo Noiva da Bi</title>
+  <meta name="description" content="Checklist, orçamento e convidados para planejar o casamento com leveza.">
+  <meta name="theme-color" content="#FBF6EE">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="../icons/icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Planner Essencial">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Great+Vibes&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <header class="topbar">
+    <button id="menu-btn" class="icon-btn" type="button" aria-label="Abrir menu">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <a class="topbar-brand" href="#/inicio"><span class="logo-sm">Universo Noiva <em>da Bi</em></span></a>
+  </header>
+
+  <aside id="sidebar">
+    <a class="brand" href="#/inicio">
+      <span class="brand-top">Universo</span>
+      <span class="brand-mid">Noiva</span>
+      <span class="brand-script">da Bi</span>
+    </a>
+    <div class="brand-couple">
+      <span id="brand-names"></span>
+      <small id="brand-date"></small>
+    </div>
+    <nav id="nav" aria-label="Seções do planner"></nav>
+    <div id="sync" class="sync" role="status"></div>
+  </aside>
+  <div id="scrim"></div>
+
+  <main id="main"></main>
+
+  <script>window.EDICAO = 'basico';</script>
+  <script src="../js/config.js"></script>
+  <script src="../js/schema.js"></script>
+  <script src="../js/store.js"></script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

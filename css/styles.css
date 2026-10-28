@@ -380,3 +380,18 @@ body.auth-mode main { margin: 0; max-width: none; padding: 0; }
 .auth-form .form-msg { margin: 0; }
 .auth-form .form-msg:empty { display: none; }
 .auth-note { text-align: center; color: var(--muted); font-size: 13px; margin: 20px 0 0; }
+
+/* ---------- Planner Essencial: itens do Premium ---------- */
+.nav-link .lock { width: 15px; height: 15px; opacity: .55; }
+.nav-link.locked span { opacity: .8; }
+.nav-premium { margin-top: 10px; border: 1px solid var(--gold-soft); color: var(--gold-deep); }
+.nav-premium:hover { background: #F6EDDC; }
+.premium-card { border-color: var(--gold-soft); background: linear-gradient(180deg, #fff, #FBF3E4); }
+.premium-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--gold-deep); background: #F6EDDC; border-radius: 99px; padding: 3px 10px; margin-bottom: 8px; }
+.premium-tag .icon { width: 13px; height: 13px; }
+.premium-list { list-style: none; padding: 0; margin: 12px 0 16px; display: grid; gap: 10px; }
+.premium-list li { padding-left: 26px; position: relative; }
+.premium-list li::before { content: '✦'; position: absolute; left: 4px; color: var(--gold); }
+.premium-list strong { display: block; font-weight: 500; }
+.premium-list span { color: var(--muted); font-size: 14px; }

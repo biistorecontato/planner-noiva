@@ -12,3 +12,7 @@ window.APP_CONFIG = null;
 //   url: 'https://SEU-PROJETO.supabase.co',
 //   anonKey: 'SUA-ANON-KEY',
 // };
+
+/* Link do botão "Quero o Planner Premium" no Planner Essencial (página de vendas ou checkout).
+   Deixe como null para mostrar "Fale com a Bi" no lugar do botão. */
+window.UPGRADE_URL = null;

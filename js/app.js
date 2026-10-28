@@ -83,7 +83,16 @@ const ICONS = {
   music: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM20 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM9 9l11-2',
   civil: 'M6 3h9l3 3v15H6zM14 3v4h4M9 11h6M9 15h3M15 19.5l1.2-2.5 1.3 2.5',
   play: 'M8 5.5v13l11-6.5z',
+  lock: 'M6 11h12v10H6zM8.5 11V7.5a3.5 3.5 0 0 1 7 0V11',
 };
+
+/* Edição: o Planner Essencial (basico/index.html define window.EDICAO = 'basico') usa este mesmo app,
+   com as seções de PREMIUM trancadas. Os dados ficam na mesma chave, então o upgrade não perde nada. */
+const BASICO = window.EDICAO === 'basico';
+const SW_URL = new URL('../sw.js', document.currentScript.src).href; // o mesmo para as duas edições
+const trancada = id => BASICO && !!PREMIUM[id];
+// O checklist do dia do casamento é do Premium: no Essencial ele nem entra no progresso.
+if (BASICO) PERIODOS.splice(PERIODOS.findIndex(p => p.id === 'pdia'), 1);
 
 function icon(name, cls = 'icon') {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -183,6 +192,7 @@ function guests() {
 
 function route() {
   const [sec, sub] = location.hash.replace(/^#\/?/, '').split('/');
+  if (BASICO && sec === 'premium') return { sec, sub };
   return { sec: SECOES.some(s => s.id === sec) ? sec : 'inicio', sub };
 }
 
@@ -199,9 +209,12 @@ function renderNav() {
       const { done, total } = overallProgress();
       badge = h('span', { class: 'badge', text: pct(done, total) + '%' });
     }
-    return h('a', { class: 'nav-link' + (s.id === sec ? ' active' : ''), href: '#/' + s.id,
+    if (trancada(s.id)) badge = icon('lock', 'icon lock');
+    return h('a', { class: 'nav-link' + (s.id === sec ? ' active' : '') + (trancada(s.id) ? ' locked' : ''), href: '#/' + s.id,
       onclick: () => document.body.classList.remove('menu-open') }, icon(s.icone), h('span', { text: s.id === 'conta' && Store.managed ? 'Minha conta' : s.titulo }), badge);
   }));
+  if (BASICO) nav.append(h('a', { class: 'nav-link nav-premium' + (sec === 'premium' ? ' active' : ''), href: '#/premium',
+    onclick: () => document.body.classList.remove('menu-open') }, icon('sparkle'), h('span', { text: 'Conhecer o Premium' })));
   const f = S().fields;
   document.getElementById('brand-names').textContent = f.noivos || '';
   document.getElementById('brand-date').textContent = f.data ? fmtDate(f.data, { day: 'numeric', month: 'long', year: 'numeric' }) : '';
@@ -225,8 +238,10 @@ function render() {
   if (sec === 'inicio') content = renderDashboard();
   else if (sec === 'checklist') content = renderChecklistPage(sub);
   else if (sec === 'conta') content = renderConta();
+  else if (sec === 'premium') content = renderPremiumPage();
+  else if (trancada(sec)) content = [pageHeader(def.titulo, 'Disponível no Planner Premium'), premiumCard(def.titulo, PREMIUM[sec])];
   else content = [pageHeader(def.titulo, def.subtitulo), ...def.blocos.map(renderBlock)];
-  main.replaceChildren(...[].concat(content));
+  main.replaceChildren(...[].concat(content).filter(x => x != null));
   renderNav();
   return scroll;
 }
@@ -246,6 +261,7 @@ function pageHeader(title, subtitle) {
 /* ---------- blocos genéricos ---------- */
 
 function renderBlock(b) {
+  if (BASICO && b.premium) return premiumCard(b.premium);
   switch (b.tipo) {
     case 'campos': return renderFields(b);
     case 'chips': return renderChips(b);
@@ -637,6 +653,38 @@ function renderIdeas() {
     IDEIAS.map(g => h('div', { class: 'idea-group' }, h('h3', { text: g.titulo }), chipGroup(g.chave, g.opcoes, update))));
 }
 
+/* ---------- Planner Essencial: convites para o Premium ---------- */
+
+function upgradeButton() {
+  return window.UPGRADE_URL
+    ? h('a', { class: 'btn', href: window.UPGRADE_URL, target: '_blank', rel: 'noopener' }, icon('sparkle'), 'Quero o Planner Premium')
+    : h('p', { class: 'card-text', text: 'Fale com a Bi para liberar o Planner Premium.' });
+}
+
+function premiumCard(title, itens) {
+  return h('section', { class: 'card premium-card' },
+    h('span', { class: 'premium-tag' }, icon('lock', 'icon'), 'Premium'),
+    h('h2', { class: 'card-title', text: title }),
+    itens && typeof itens !== 'string' ? h('ul', { class: 'premium-list' }, itens.map(t => h('li', { text: t }))) : null,
+    h('p', { class: 'card-text', text: 'Ao fazer o upgrade, tudo o que vocês já preencheram continua aqui.' }),
+    upgradeButton());
+}
+
+function renderPremiumPage() {
+  return [
+    pageHeader('Planner Premium', 'O planejamento completo da Bi, do primeiro passo até o grande dia'),
+    h('section', { class: 'card premium-card' },
+      h('p', { class: 'card-text', text: 'Vocês estão no Planner Essencial: checklist, dados do casamento, financeiro, convidados e anotações. O Premium abre tudo o que falta para planejar com tranquilidade:' }),
+      h('ul', { class: 'premium-list' }, SECOES.filter(s => PREMIUM[s.id]).map(s =>
+        h('li', {}, h('strong', { text: s.titulo }), h('span', { text: PREMIUM[s.id].join(' · ') })))),
+      h('ul', { class: 'premium-list' },
+        h('li', {}, h('strong', { text: 'Divisão do orçamento' }), h('span', { text: 'Quanto reservar para cada parte do casamento' })),
+        h('li', {}, h('strong', { text: 'Antes de casar, leia isso' }), h('span', { text: 'A ordem inteligente do planejamento e 15 erros para evitar' }))),
+      h('p', { class: 'card-text', text: 'Tudo o que vocês já preencheram continua no app depois do upgrade.' }),
+      upgradeButton()),
+  ];
+}
+
 function renderClosing() {
   return h('section', { class: 'card closing' },
     h('p', { class: 'closing-title', text: TEXTOS.encerramentoTitulo }),
@@ -666,7 +714,7 @@ function renderDashboard() {
   }
 
   const hero = h('section', { class: 'hero' },
-    h('p', { class: 'hero-kicker', text: 'Planner completo de casamento' }),
+    h('p', { class: 'hero-kicker', text: BASICO ? 'Planner essencial de casamento' : 'Planner completo de casamento' }),
     h('h1', { class: 'hero-names', text: f.noivos || 'Nosso grande dia' }),
     f.data ? h('p', { class: 'hero-date', text: [fmtDate(f.data, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }), f.horario].filter(Boolean).join(' · ') }) : null,
     [f.local_cerimonia, f.cidade].some(Boolean) ? h('p', { class: 'hero-place', text: [f.local_cerimonia, f.cidade].filter(Boolean).join(' — ') }) : null,
@@ -734,7 +782,9 @@ function renderDashboard() {
       TEXTOS.recado.map(t => h('p', { text: t })),
       h('p', { class: 'card-text', text: TEXTOS.comoUsar }),
       h('p', { class: 'signature', text: 'Bi' })),
-    h('details', { class: 'card letter' },
+    BASICO ? premiumCard('Quer o planejamento completo?', ['Guia da cerimônia e sugestões de músicas com prévia',
+      'Controle de fornecedores e comparativo de orçamentos', 'Casamento civil, paletas de cores e checklists do grande dia'])
+    : h('details', { class: 'card letter' },
       h('summary', { text: 'Antes de casar, leia isso' }),
       h('h3', { class: 'sub-title', text: 'A ordem inteligente do planejamento' }),
       h('ol', { class: 'opt-steps' }, TEXTOS.ordemInteligente.map(t => h('li', {}, h('strong', { text: t })))),
@@ -748,8 +798,8 @@ function renderChecklistPage(sub) {
   const cur = currentPeriod();
   const dia = PERIODOS.find(x => x.id === 'pdia');
   // Aba "Para o grande dia": o checklist do dia (um período) e as listas da noiva, do noivo e do kit.
-  const grandeDia = [{ ...dia, aba: dia.titulo }, ...LISTAS_GRANDE_DIA];
-  const p = PERIODOS.find(x => x.id === sub) || LISTAS_GRANDE_DIA.find(x => x.id === sub) || cur || PERIODOS[0];
+  const grandeDia = dia ? [{ ...dia, aba: dia.titulo }, ...LISTAS_GRANDE_DIA] : [];
+  const p = PERIODOS.find(x => x.id === sub) || (!BASICO && LISTAS_GRANDE_DIA.find(x => x.id === sub)) || cur || PERIODOS[0];
   const prog = overallProgress();
   const tab = (x, label) => {
     const items = checklist(x.id, x.itens);
@@ -768,12 +818,13 @@ function renderChecklistPage(sub) {
   return [
     pageHeader('Checklist', `${prog.done} de ${prog.total} tarefas do planejamento concluídas`),
     tabRow('Por período', PERIODOS.filter(x => x !== dia), x => x.titulo),
-    tabRow('Para o grande dia', grandeDia, x => x.aba),
+    BASICO ? null : tabRow('Para o grande dia', grandeDia, x => x.aba),
     h('div', { class: 'period-head' },
       h('h2', { text: p.titulo }),
       h('p', { text: p.subtitulo }),
       p === cur ? h('span', { class: 'tag', text: 'Etapa atual' }) : null),
     renderChecklist(p.id, p.itens, { observacao: p.observacao, notas: p.notas }),
+    BASICO ? premiumCard('Checklists do grande dia', PREMIUM.grandedia.slice(1)) : null,
   ];
 }
 
@@ -1019,5 +1070,5 @@ render();
 Store.connect().then(rerender);
 
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register(SW_URL).catch(() => {});
 }

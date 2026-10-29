@@ -289,7 +289,7 @@ const DIVISAO_ORCAMENTO = [
   ['Extras', 5, ['Beleza', 'Doces e bolo', 'Lembrancinhas', 'Cerimonial', 'Extras', 'Sem categoria']],
 ];
 
-/* Cores que separam um fornecedor do outro (tons das paletas dos guias). */
+/* Cores que separam um bloco do outro (fornecedores, convidados), nos tons das paletas dos guias. */
 const CORES_LINHA = [
   ['#FBF2E2', '#D2AE6A'], ['#FBEDEA', '#D89E97'], ['#EEF2E7', '#9AAB84'],
   ['#ECF0F6', '#8E9FBD'], ['#F8EBE2', '#CB9172'], ['#F6EBEE', '#B07884'],
@@ -354,7 +354,8 @@ const SECOES = [
     id: 'convidados', titulo: 'Convidados', icone: 'users',
     blocos: [
       { tipo: 'resumoConvidados' },
-      { tipo: 'tabela', id: 'convidados', titulo: 'Lista de convidados', rotuloNovo: 'Adicionar convidado', filtroGrupo: true,
+      { tipo: 'tabela', id: 'convidados', titulo: 'Lista de convidados', rotuloNovo: 'Adicionar convidado', filtroGrupo: true, cores: true,
+        rotuloLinha: r => r.nome,
         colunas: [['nome', 'Nome'], ['grupo', 'Grupo/Família', 'select', GRUPOS], ['telefone', 'Telefone', 'tel'],
           ['convite', 'Convite enviado', 'check'], ['confirmou', 'Confirmou?', 'select', ['Aguardando', 'Sim', 'Não']],
           ['quantidade', 'Quantidade', 'number'], ['criancas', 'Crianças', 'number']],

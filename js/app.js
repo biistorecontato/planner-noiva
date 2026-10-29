@@ -473,7 +473,7 @@ function renderTable(b) {
     });
     if (!b.cores) return h('div', { class: 'row-card' }, tools, h('div', { class: 'row-fields' }, cells));
     const [bg, line] = CORES_LINHA[i % CORES_LINHA.length];
-    return h('div', { class: 'row-card tinted', style: `--tint:${bg};--tint-line:${line}` }, tools, head, h('div', { class: 'row-fields' }, cells));
+    return h('div', { class: 'row-card tinted', 'data-row': row.id, style: `--tint:${bg};--tint-line:${line}` }, tools, head, h('div', { class: 'row-fields' }, cells));
   };
 
   const filters = b.filtroGrupo ? h('div', { class: 'filters' },
@@ -526,17 +526,97 @@ function renderFinanceSummary() {
       h('tbody', {}, cats.map(([c, v]) => h('tr', {}, h('td', { text: c }), h('td', { text: brl(v.total) }), h('td', { text: brl(v.pago) }))))) : null);
 }
 
+// Cada número do resumo abre a lista só daquele grupo, com busca própria.
+const guestPanel = { view: null, q: '' };
+const GUEST_VIEWS = {
+  previstos: ['Todos os convidados', () => true],
+  confirmados: ['Confirmaram presença', r => r.confirmou === 'Sim'],
+  aguardando: ['Aguardando resposta', r => r.confirmou !== 'Sim' && r.confirmou !== 'Não'],
+  naoVao: ['Não irão', r => r.confirmou === 'Não'],
+  criancas: ['Com crianças', r => num(r.criancas) > 0 && r.confirmou !== 'Não'],
+};
+
+function guestStat(view, label, value, tone) {
+  const on = guestPanel.view === view;
+  return h('button', { class: 'stat stat-btn' + (tone ? ' ' + tone : '') + (on ? ' on' : ''), type: 'button', 'aria-expanded': String(on),
+    onclick: () => { guestPanel.view = on ? null : view; guestPanel.q = ''; refreshSummaries();
+      if (!on) document.querySelector('.guest-panel input')?.focus({ preventScroll: true }); } },
+    h('span', { class: 'stat-label', text: label }), h('strong', { text: value }), h('small', { class: 'stat-hint', text: on ? 'Fechar lista' : 'Ver lista' }));
+}
+
 function renderGuestSummary() {
   const g = guests();
   return h('section', { class: 'card', 'data-summary': 'guests' },
     h('h2', { class: 'card-title', text: 'Confirmação de presença' }),
+    h('p', { class: 'card-text', text: 'Toquem em um número para ver só aqueles convidados.' }),
     h('div', { class: 'stats' },
-      stat('Convidados previstos', g.previstos),
-      stat('Confirmados', g.confirmados, 'good'),
-      stat('Aguardando resposta', g.aguardando, g.aguardando ? 'warn' : ''),
-      stat('Não irão', g.naoVao),
-      stat('Crianças', g.criancas),
-      stat('Convites enviados', `${g.convites}/${g.nomes}`)));
+      guestStat('previstos', 'Convidados previstos', g.previstos),
+      guestStat('confirmados', 'Confirmados', g.confirmados, 'good'),
+      guestStat('aguardando', 'Aguardando resposta', g.aguardando, g.aguardando ? 'warn' : ''),
+      guestStat('naoVao', 'Não irão', g.naoVao),
+      guestStat('criancas', 'Crianças', g.criancas),
+      guestStat('convites', 'Convites enviados', `${g.convites}/${g.nomes}`)),
+    guestPanel.view ? renderGuestPanel() : null);
+}
+
+function renderGuestPanel() {
+  const title = guestPanel.view === 'convites' ? 'Convites' : GUEST_VIEWS[guestPanel.view][0];
+  const list = h('div', { class: 'guest-panel-list' }, guestPanelGroups());
+  return h('div', { class: 'guest-panel' },
+    h('div', { class: 'guest-panel-head' }, h('h3', { text: title }),
+      h('button', { class: 'btn-text', type: 'button', onclick: () => { guestPanel.view = null; refreshSummaries(); }, text: 'Fechar' })),
+    h('input', { type: 'search', placeholder: 'Buscar nesta lista…', value: guestPanel.q, 'aria-label': 'Buscar nesta lista',
+      oninput: e => { guestPanel.q = e.target.value; list.replaceChildren(...guestPanelGroups()); } }),
+    list);
+}
+
+function guestPanelGroups() {
+  const rows = table({ id: 'convidados' });
+  const q = guestPanel.q.trim().toLowerCase();
+  const match = r => !q || [r.nome, r.grupo, r.telefone].some(v => (v || '').toLowerCase().includes(q));
+  const groups = guestPanel.view === 'convites'
+    ? [['Já enviados', rows.filter(r => r.convite)], ['Faltam enviar', rows.filter(r => !r.convite)]]
+    : [[null, rows.filter(GUEST_VIEWS[guestPanel.view][1])]];
+  return groups.map(([label, all]) => {
+    const shown = all.filter(match);
+    return h('div', { class: 'guest-group' },
+      label ? h('h4', {}, label, h('span', { class: 'count', text: String(all.length) })) : null,
+      shown.length ? h('ul', { class: 'guest-list' }, shown.map(r => guestItem(r, rows.indexOf(r))))
+        : h('p', { class: 'empty', text: q ? 'Ninguém encontrado com essa busca.' : 'Ninguém aqui ainda.' }));
+  });
+}
+
+function guestItem(r, i) {
+  const [bg, line] = CORES_LINHA[i % CORES_LINHA.length];
+  const qtd = r.quantidade === '' || r.quantidade == null ? 1 : num(r.quantidade);
+  const info = [r.grupo, `${qtd} ${qtd === 1 ? 'pessoa' : 'pessoas'}`, num(r.criancas) ? `${num(r.criancas)} criança(s)` : '', r.telefone]
+    .filter(Boolean).join(' · ');
+  const update = (k, v) => { r[k] = v; Store.save(); rerender(); };
+  const control = guestPanel.view === 'convites'
+    ? h('label', { class: 'guest-toggle' }, h('input', { type: 'checkbox', checked: !!r.convite, onchange: e => update('convite', e.target.checked) }), 'Enviado')
+    : h('select', { 'aria-label': 'Confirmou?', onchange: e => update('confirmou', e.target.value) },
+      ['Aguardando', 'Sim', 'Não'].map(o => h('option', { value: o, text: o === 'Sim' ? 'Confirmou' : o === 'Não' ? 'Não vai' : o,
+        selected: (r.confirmou || 'Aguardando') === o })));
+  return h('li', { class: 'guest-item', style: `--tint:${bg};--tint-line:${line}` },
+    h('span', { class: 'row-badge', text: String(i + 1) }),
+    h('button', { class: 'guest-name', type: 'button', title: 'Ver na lista completa', onclick: () => showGuest(r) },
+      h('strong', { text: r.nome || `Convidado ${i + 1}` }), info ? h('small', { text: info }) : null),
+    control);
+}
+
+/* Leva até o cartão do convidado na lista completa (limpando o filtro, se ele estiver escondido). */
+function showGuest(r) {
+  let card = document.querySelector(`[data-row="${r.id}"]`);
+  if (!card) {
+    tableFilters.convidados = { q: '', grupo: '' };
+    rerender();
+    card = document.querySelector(`[data-row="${r.id}"]`);
+  }
+  if (!card) return;
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  card.classList.remove('flash');
+  void card.offsetWidth;
+  card.classList.add('flash');
 }
 
 function renderBudgetSplit() {
